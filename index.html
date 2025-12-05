@@ -12,97 +12,119 @@
             margin: 0;
             padding: 10px;
             color: #333;
+            overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
         }
-        h1 { color: #2c3e50; font-size: 1.5rem; }
+        h1 { color: #2c3e50; font-size: 1.5rem; margin-bottom: 5px; }
         .card {
             background: white;
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px;
             margin: 10px auto;
             max-width: 400px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         button {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 15px 20px;
+            padding: 12px;
             text-align: center;
-            text-decoration: none;
-            display: inline-block;
             font-size: 18px;
-            margin: 8px 4px;
+            margin: 5px 2px;
             cursor: pointer;
             border-radius: 12px;
             width: 100%;
-            transition: transform 0.1s;
+            touch-action: manipulation;
         }
-        button:active { transform: scale(0.98); }
-        button.choice-btn {
-            background-color: #2196F3;
-            font-size: 22px;
-            font-weight: bold;
-        }
-        button.menu-btn { background-color: #ff9800; font-weight: bold;}
+        button:active { transform: scale(0.98); background-color: #45a049; }
+        button.choice-btn { background-color: #2196F3; font-size: 22px; font-weight: bold; margin-bottom: 10px;}
+        button.menu-btn { background-color: #ff9800; font-weight: bold; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         button.sound-btn { background-color: #9c27b0; }
+        button.clear-btn { background-color: #e74c3c; width: 48%; display: inline-block; }
+        button.check-btn { background-color: #2ecc71; width: 48%; display: inline-block; }
         
-        input[type=text] {
-            width: 80%;
-            padding: 12px 20px;
-            margin: 8px 0;
-            box-sizing: border-box;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            font-size: 20px;
-            text-align: center;
-        }
-        
-        .feedback {
-            font-weight: bold;
-            font-size: 1.2rem;
-            min-height: 30px;
-            margin-top: 10px;
-        }
+        .feedback { font-weight: bold; font-size: 1.2rem; min-height: 30px; margin-top: 10px; }
         .correct { color: green; }
         .wrong { color: red; }
-        .hidden { display: none; }
-        .score-board { font-size: 1.2rem; margin-bottom: 10px; color: #555; }
-        #question-display { font-size: 3rem; margin: 20px 0; color: #333; }
-        .emoji { font-size: 2rem; }
+        .hidden { display: none !important; }
+        .score-board { font-size: 1.2rem; margin-bottom: 5px; color: #555; font-weight: bold;}
+        #question-display { font-size: 2.5rem; margin: 10px 0; color: #333; letter-spacing: 2px; font-weight: bold;}
+        
+        /* Canvas Styling */
+        #canvas-container {
+            position: relative;
+            margin: 10px auto;
+            border: 2px dashed #bbb;
+            border-radius: 10px;
+            background-color: #fffdf0; /* Paper color */
+            touch-action: none; /* Crucial for drawing on mobile */
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        .self-check-area {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            animation: fadeIn 0.5s;
+        }
+        .correct-answer-display {
+            font-size: 3rem;
+            color: #2e7d32;
+            font-family: 'Courier New', monospace; /* Monospace mimics handwriting slightly better */
+            margin: 10px 0;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div id="menu" class="card">
-        <h1>🎓 לומדים למבחן באנגלית</h1>
+        <h1>🎓 לומדים למבחן - אלה</h1>
         <p>בחרי משחק:</p>
         <button class="menu-btn" onclick="startGame('letters')">🅰️ התאמת אותיות (A-a)</button>
-        <button class="menu-btn" onclick="startGame('writing')">✍️ כתיבה באותיות קטנות</button>
+        <button class="menu-btn" onclick="startGame('writing')">✍️ כתיבה (ציור על המסך)</button>
         <button class="menu-btn" onclick="startGame('names')">👧 תרגום שמות</button>
         <button class="menu-btn" onclick="startGame('listening')">🎧 שמיעה (צבעים ומספרים)</button>
     </div>
 
     <div id="game-area" class="card hidden">
         <div class="score-board">נקודות: <span id="score">0</span></div>
+        <button onclick="showMenu()" style="background-color: #95a5a6; padding: 5px; font-size: 14px; width: auto; position: absolute; top: 15px; left: 15px;">יציאה</button>
+        
         <div id="question-container">
-            <p id="instruction-text"></p>
+            <p id="instruction-text" style="font-size: 1.1rem;"></p>
             <div id="question-display"></div>
             
             <div id="choices-area"></div>
             
-            <div id="input-area" class="hidden">
-                <input type="text" id="text-answer" placeholder="כתבי כאן..." autocomplete="off">
-                <button onclick="checkTextAnswer()">בדיקה</button>
+            <div id="drawing-area" class="hidden">
+                <div id="canvas-container">
+                    <canvas id="drawCanvas" width="300" height="200"></canvas>
+                </div>
+                <div id="drawing-controls">
+                    <button class="clear-btn" onclick="clearCanvas()">🗑️ למחוק</button>
+                    <button class="check-btn" onclick="revealAnswer()">בדיקה ✔️</button>
+                </div>
+                
+                <div id="self-check" class="self-check-area hidden">
+                    <p>התשובה הנכונה היא:</p>
+                    <div id="correct-answer-text" class="correct-answer-display"></div>
+                    <p>האם כתבת דומה?</p>
+                    <button onclick="handleSelfCheck(true)" style="background: #4CAF50; width: 45%;">כן! 👍</button>
+                    <button onclick="handleSelfCheck(false)" style="background: #f44336; width: 45%;">לא 👎</button>
+                </div>
             </div>
             
             <button id="play-sound-btn" class="sound-btn hidden" onclick="repeatSound()">🔊 השמע שוב</button>
         </div>
         <div id="feedback" class="feedback"></div>
-        <button onclick="showMenu()" style="background-color: #777; margin-top: 20px;">חזרה לתפריט</button>
     </div>
 
 <script>
-    // Data based on the provided sheets
+    // --- Data ---
     const letters = [
         { big: 'A', small: 'a' }, { big: 'B', small: 'b' }, 
         { big: 'D', small: 'd' }, { big: 'G', small: 'g' }, 
@@ -134,9 +156,73 @@
         { word: 'Dad', type: 'vocab', display: 'אבא' }
     ];
 
+    // --- State ---
     let score = 0;
     let currentGame = '';
     let currentQuestion = null;
+
+    // --- Canvas Setup ---
+    const canvas = document.getElementById('drawCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+
+    // Fix Canvas scaling for mobile screens
+    function resizeCanvas() {
+        const container = document.getElementById('canvas-container');
+        // Make canvas fill the container width, keep aspect ratio roughly
+        let width = Math.min(window.innerWidth - 60, 350);
+        canvas.width = width;
+        canvas.height = 200;
+        
+        // Setup drawing style
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000';
+    }
+
+    // Drawing Events (Touch & Mouse)
+    function startDraw(e) {
+        isDrawing = true;
+        draw(e);
+    }
+    function endDraw() {
+        isDrawing = false;
+        ctx.beginPath();
+    }
+    function draw(e) {
+        if (!isDrawing) return;
+        
+        e.preventDefault(); // Stop scrolling
+        
+        let clientX, clientY;
+        if(e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    }
+
+    // Add Event Listeners
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mousemove', draw);
+    
+    canvas.addEventListener('touchstart', startDraw, {passive: false});
+    canvas.addEventListener('touchend', endDraw);
+    canvas.addEventListener('touchmove', draw, {passive: false});
+
+    // --- Game Logic ---
 
     function showMenu() {
         document.getElementById('menu').classList.remove('hidden');
@@ -150,22 +236,25 @@
         currentGame = gameType;
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('game-area').classList.remove('hidden');
+        resizeCanvas();
         nextQuestion();
     }
 
     function nextQuestion() {
         document.getElementById('feedback').innerText = '';
-        document.getElementById('text-answer').value = '';
         const display = document.getElementById('question-display');
         const choices = document.getElementById('choices-area');
-        const inputArea = document.getElementById('input-area');
+        const drawingArea = document.getElementById('drawing-area');
         const instruction = document.getElementById('instruction-text');
         const soundBtn = document.getElementById('play-sound-btn');
-
+        
+        // Reset UI
         choices.innerHTML = '';
-        inputArea.classList.add('hidden');
+        drawingArea.classList.add('hidden');
         soundBtn.classList.add('hidden');
         display.classList.remove('hidden');
+        document.getElementById('self-check').classList.add('hidden');
+        document.getElementById('drawing-controls').classList.remove('hidden');
 
         if (currentGame === 'letters') {
             instruction.innerText = "איזו אות קטנה מתאימה לאות הגדולה?";
@@ -173,7 +262,6 @@
             currentQuestion = item;
             display.innerText = item.big;
             
-            // Generate options
             let options = [item.small];
             while(options.length < 3) {
                 let r = letters[Math.floor(Math.random() * letters.length)].small;
@@ -182,12 +270,13 @@
             shuffle(options).forEach(opt => createButton(opt, opt === item.small));
 
         } else if (currentGame === 'writing') {
-            instruction.innerText = "כתבי את המילה באותיות קטנות באנגלית:";
+            instruction.innerText = "ציירי את המילה באותיות קטנות:";
             let word = wordsToSmall[Math.floor(Math.random() * wordsToSmall.length)];
             currentQuestion = word;
             display.innerText = word;
-            inputArea.classList.remove('hidden');
-            document.getElementById('text-answer').focus();
+            
+            drawingArea.classList.remove('hidden');
+            clearCanvas();
 
         } else if (currentGame === 'names') {
             instruction.innerText = "מה התרגום הנכון?";
@@ -203,10 +292,10 @@
             shuffle(options).forEach(opt => createButton(opt, opt === item.he));
 
         } else if (currentGame === 'listening') {
-            instruction.innerText = "לחצי על הרמקול ואז בחרי את התשובה הנכונה:";
+            instruction.innerText = "לחצי על הרמקול ובחרי תשובה:";
             let item = listeningData[Math.floor(Math.random() * listeningData.length)];
             currentQuestion = item;
-            display.classList.add('hidden'); // Hide text, show sound button
+            display.classList.add('hidden');
             soundBtn.classList.remove('hidden');
             
             setTimeout(() => speak(item.word), 500);
@@ -228,9 +317,21 @@
         document.getElementById('choices-area').appendChild(btn);
     }
 
-    function checkTextAnswer() {
-        let userAns = document.getElementById('text-answer').value.trim();
-        if (userAns === currentQuestion.toLowerCase()) {
+    // Drawing Logic Helper
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function revealAnswer() {
+        // Hide controls, show check area
+        document.getElementById('drawing-controls').classList.add('hidden');
+        const selfCheck = document.getElementById('self-check');
+        selfCheck.classList.remove('hidden');
+        document.getElementById('correct-answer-text').innerText = currentQuestion.toLowerCase();
+    }
+
+    function handleSelfCheck(isCorrect) {
+        if (isCorrect) {
             handleAnswer(true);
         } else {
             handleAnswer(false);
@@ -240,23 +341,26 @@
     function handleAnswer(isCorrect) {
         const fb = document.getElementById('feedback');
         if (isCorrect) {
-            fb.innerText = "כל הכבוד! 👍";
+            fb.innerText = "כל הכבוד! את אלופה! ⭐";
             fb.className = "feedback correct";
             score += 10;
             document.getElementById('score').innerText = score;
-            speak("Good job"); // Reinforcement
-            setTimeout(nextQuestion, 1500);
+            speak("Good job"); 
+            setTimeout(nextQuestion, 2000);
         } else {
-            fb.innerText = "לא נורא, נסי שוב 😌";
+            fb.innerText = "לא נורא, נסי שוב בפעם הבאה 😉";
             fb.className = "feedback wrong";
+            setTimeout(nextQuestion, 2000); // Move on anyway
         }
     }
 
     function speak(text) {
-        const msg = new SpeechSynthesisUtterance();
-        msg.text = text;
-        msg.lang = 'en-US';
-        window.speechSynthesis.speak(msg);
+        if ('speechSynthesis' in window) {
+            const msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = 'en-US';
+            window.speechSynthesis.speak(msg);
+        }
     }
 
     function repeatSound() {

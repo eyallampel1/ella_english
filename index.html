@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>מתכוננים למבחן באנגלית!</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f8ff;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+            color: #333;
+        }
+        h1 { color: #2c3e50; font-size: 1.5rem; }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px auto;
+            max-width: 400px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 18px;
+            margin: 8px 4px;
+            cursor: pointer;
+            border-radius: 12px;
+            width: 100%;
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.98); }
+        button.choice-btn {
+            background-color: #2196F3;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        button.menu-btn { background-color: #ff9800; font-weight: bold;}
+        button.sound-btn { background-color: #9c27b0; }
+        
+        input[type=text] {
+            width: 80%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        .feedback {
+            font-weight: bold;
+            font-size: 1.2rem;
+            min-height: 30px;
+            margin-top: 10px;
+        }
+        .correct { color: green; }
+        .wrong { color: red; }
+        .hidden { display: none; }
+        .score-board { font-size: 1.2rem; margin-bottom: 10px; color: #555; }
+        #question-display { font-size: 3rem; margin: 20px 0; color: #333; }
+        .emoji { font-size: 2rem; }
+    </style>
+</head>
+<body>
+
+    <div id="menu" class="card">
+        <h1>🎓 לומדים למבחן באנגלית</h1>
+        <p>בחרי משחק:</p>
+        <button class="menu-btn" onclick="startGame('letters')">🅰️ התאמת אותיות (A-a)</button>
+        <button class="menu-btn" onclick="startGame('writing')">✍️ כתיבה באותיות קטנות</button>
+        <button class="menu-btn" onclick="startGame('names')">👧 תרגום שמות</button>
+        <button class="menu-btn" onclick="startGame('listening')">🎧 שמיעה (צבעים ומספרים)</button>
+    </div>
+
+    <div id="game-area" class="card hidden">
+        <div class="score-board">נקודות: <span id="score">0</span></div>
+        <div id="question-container">
+            <p id="instruction-text"></p>
+            <div id="question-display"></div>
+            
+            <div id="choices-area"></div>
+            
+            <div id="input-area" class="hidden">
+                <input type="text" id="text-answer" placeholder="כתבי כאן..." autocomplete="off">
+                <button onclick="checkTextAnswer()">בדיקה</button>
+            </div>
+            
+            <button id="play-sound-btn" class="sound-btn hidden" onclick="repeatSound()">🔊 השמע שוב</button>
+        </div>
+        <div id="feedback" class="feedback"></div>
+        <button onclick="showMenu()" style="background-color: #777; margin-top: 20px;">חזרה לתפריט</button>
+    </div>
+
+<script>
+    // Data based on the provided sheets
+    const letters = [
+        { big: 'A', small: 'a' }, { big: 'B', small: 'b' }, 
+        { big: 'D', small: 'd' }, { big: 'G', small: 'g' }, 
+        { big: 'N', small: 'n' }
+    ];
+
+    const wordsToSmall = ['BAG', 'DAD', 'BANANA', 'DAN', 'GAB', 'NAD', 'AND', 'BAND'];
+    
+    const namesTrans = [
+        { en: 'Dan', he: 'דן' }, { en: 'Gad', he: 'גד' }, 
+        { en: 'Nad', he: 'נד' }, { en: 'Ann', he: 'אן' }, 
+        { en: 'Dana', he: 'דנה' }
+    ];
+
+    const listeningData = [
+        { word: 'Red', type: 'color', display: '🟥' },
+        { word: 'Blue', type: 'color', display: '🟦' },
+        { word: 'Green', type: 'color', display: '🟩' },
+        { word: 'Yellow', type: 'color', display: '🟨' },
+        { word: 'Black', type: 'color', display: '⬛' },
+        { word: 'One', type: 'number', display: '1' },
+        { word: 'Two', type: 'number', display: '2' },
+        { word: 'Three', type: 'number', display: '3' },
+        { word: 'Four', type: 'number', display: '4' },
+        { word: 'Five', type: 'number', display: '5' },
+        { word: 'Ten', type: 'number', display: '10' },
+        { word: 'Bag', type: 'vocab', display: 'תיק' },
+        { word: 'Banana', type: 'vocab', display: 'בננה' },
+        { word: 'Dad', type: 'vocab', display: 'אבא' }
+    ];
+
+    let score = 0;
+    let currentGame = '';
+    let currentQuestion = null;
+
+    function showMenu() {
+        document.getElementById('menu').classList.remove('hidden');
+        document.getElementById('game-area').classList.add('hidden');
+        document.getElementById('feedback').innerText = '';
+    }
+
+    function startGame(gameType) {
+        score = 0;
+        document.getElementById('score').innerText = score;
+        currentGame = gameType;
+        document.getElementById('menu').classList.add('hidden');
+        document.getElementById('game-area').classList.remove('hidden');
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('text-answer').value = '';
+        const display = document.getElementById('question-display');
+        const choices = document.getElementById('choices-area');
+        const inputArea = document.getElementById('input-area');
+        const instruction = document.getElementById('instruction-text');
+        const soundBtn = document.getElementById('play-sound-btn');
+
+        choices.innerHTML = '';
+        inputArea.classList.add('hidden');
+        soundBtn.classList.add('hidden');
+        display.classList.remove('hidden');
+
+        if (currentGame === 'letters') {
+            instruction.innerText = "איזו אות קטנה מתאימה לאות הגדולה?";
+            let item = letters[Math.floor(Math.random() * letters.length)];
+            currentQuestion = item;
+            display.innerText = item.big;
+            
+            // Generate options
+            let options = [item.small];
+            while(options.length < 3) {
+                let r = letters[Math.floor(Math.random() * letters.length)].small;
+                if(!options.includes(r)) options.push(r);
+            }
+            shuffle(options).forEach(opt => createButton(opt, opt === item.small));
+
+        } else if (currentGame === 'writing') {
+            instruction.innerText = "כתבי את המילה באותיות קטנות באנגלית:";
+            let word = wordsToSmall[Math.floor(Math.random() * wordsToSmall.length)];
+            currentQuestion = word;
+            display.innerText = word;
+            inputArea.classList.remove('hidden');
+            document.getElementById('text-answer').focus();
+
+        } else if (currentGame === 'names') {
+            instruction.innerText = "מה התרגום הנכון?";
+            let item = namesTrans[Math.floor(Math.random() * namesTrans.length)];
+            currentQuestion = item;
+            display.innerText = item.en;
+            
+            let options = [item.he];
+            while(options.length < 3) {
+                let r = namesTrans[Math.floor(Math.random() * namesTrans.length)].he;
+                if(!options.includes(r)) options.push(r);
+            }
+            shuffle(options).forEach(opt => createButton(opt, opt === item.he));
+
+        } else if (currentGame === 'listening') {
+            instruction.innerText = "לחצי על הרמקול ואז בחרי את התשובה הנכונה:";
+            let item = listeningData[Math.floor(Math.random() * listeningData.length)];
+            currentQuestion = item;
+            display.classList.add('hidden'); // Hide text, show sound button
+            soundBtn.classList.remove('hidden');
+            
+            setTimeout(() => speak(item.word), 500);
+
+            let options = [item];
+            while(options.length < 4) {
+                let r = listeningData[Math.floor(Math.random() * listeningData.length)];
+                if(!options.includes(r)) options.push(r);
+            }
+            shuffle(options).forEach(opt => createButton(opt.display, opt.word === item.word));
+        }
+    }
+
+    function createButton(text, isCorrect) {
+        const btn = document.createElement('button');
+        btn.innerText = text;
+        btn.className = 'choice-btn';
+        btn.onclick = () => handleAnswer(isCorrect);
+        document.getElementById('choices-area').appendChild(btn);
+    }
+
+    function checkTextAnswer() {
+        let userAns = document.getElementById('text-answer').value.trim();
+        if (userAns === currentQuestion.toLowerCase()) {
+            handleAnswer(true);
+        } else {
+            handleAnswer(false);
+        }
+    }
+
+    function handleAnswer(isCorrect) {
+        const fb = document.getElementById('feedback');
+        if (isCorrect) {
+            fb.innerText = "כל הכבוד! 👍";
+            fb.className = "feedback correct";
+            score += 10;
+            document.getElementById('score').innerText = score;
+            speak("Good job"); // Reinforcement
+            setTimeout(nextQuestion, 1500);
+        } else {
+            fb.innerText = "לא נורא, נסי שוב 😌";
+            fb.className = "feedback wrong";
+        }
+    }
+
+    function speak(text) {
+        const msg = new SpeechSynthesisUtterance();
+        msg.text = text;
+        msg.lang = 'en-US';
+        window.speechSynthesis.speak(msg);
+    }
+
+    function repeatSound() {
+        if(currentQuestion && currentQuestion.word) {
+            speak(currentQuestion.word);
+        }
+    }
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+</script>
+
+</body>
+</html>

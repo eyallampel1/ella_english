@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>מתכוננים למבחן באנגלית!</title>
+    <title>מתכוננים למבחן באנגלית - אלה</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -12,7 +12,7 @@
             margin: 0;
             padding: 10px;
             color: #333;
-            overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
+            overscroll-behavior: none;
         }
         h1 { color: #2c3e50; font-size: 1.5rem; margin-bottom: 5px; }
         .card {
@@ -39,6 +39,7 @@
         button:active { transform: scale(0.98); background-color: #45a049; }
         button.choice-btn { background-color: #2196F3; font-size: 22px; font-weight: bold; margin-bottom: 10px;}
         button.menu-btn { background-color: #ff9800; font-weight: bold; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        button.dictation-btn { background-color: #e91e63; font-weight: bold; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         button.sound-btn { background-color: #9c27b0; }
         button.clear-btn { background-color: #e74c3c; width: 48%; display: inline-block; }
         button.check-btn { background-color: #2ecc71; width: 48%; display: inline-block; }
@@ -56,13 +57,11 @@
             margin: 10px auto;
             border: 2px dashed #bbb;
             border-radius: 10px;
-            background-color: #fffdf0; /* Paper color */
-            touch-action: none; /* Crucial for drawing on mobile */
+            background-color: #fffdf0;
+            touch-action: none;
         }
-        canvas {
-            display: block;
-            cursor: crosshair;
-        }
+        canvas { display: block; cursor: crosshair; }
+        
         .self-check-area {
             background: #e8f5e9;
             padding: 10px;
@@ -73,9 +72,18 @@
         .correct-answer-display {
             font-size: 3rem;
             color: #2e7d32;
-            font-family: 'Courier New', monospace; /* Monospace mimics handwriting slightly better */
+            font-family: 'Courier New', monospace;
             margin: 10px 0;
         }
+        
+        /* Dictation Timer Style */
+        #timer-display {
+            font-size: 4rem;
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
@@ -86,6 +94,7 @@
         <p>בחרי משחק:</p>
         <button class="menu-btn" onclick="startGame('letters')">🅰️ התאמת אותיות (A-a)</button>
         <button class="menu-btn" onclick="startGame('writing')">✍️ כתיבה (ציור על המסך)</button>
+        <button class="dictation-btn" onclick="startGame('dictation')">🎤 הכתבה (כמו במבחן!)</button>
         <button class="menu-btn" onclick="startGame('names')">👧 תרגום שמות</button>
         <button class="menu-btn" onclick="startGame('listening')">🎧 שמיעה (צבעים ומספרים)</button>
     </div>
@@ -96,6 +105,9 @@
         
         <div id="question-container">
             <p id="instruction-text" style="font-size: 1.1rem;"></p>
+            
+            <div id="timer-display" class="hidden"></div>
+            
             <div id="question-display"></div>
             
             <div id="choices-area"></div>
@@ -108,14 +120,14 @@
                     <button class="clear-btn" onclick="clearCanvas()">🗑️ למחוק</button>
                     <button class="check-btn" onclick="revealAnswer()">בדיקה ✔️</button>
                 </div>
-                
-                <div id="self-check" class="self-check-area hidden">
-                    <p>התשובה הנכונה היא:</p>
-                    <div id="correct-answer-text" class="correct-answer-display"></div>
-                    <p>האם כתבת דומה?</p>
-                    <button onclick="handleSelfCheck(true)" style="background: #4CAF50; width: 45%;">כן! 👍</button>
-                    <button onclick="handleSelfCheck(false)" style="background: #f44336; width: 45%;">לא 👎</button>
-                </div>
+            </div>
+
+            <div id="self-check" class="self-check-area hidden">
+                <p>התשובה הנכונה היא:</p>
+                <div id="correct-answer-text" class="correct-answer-display"></div>
+                <p>האם רשמת נכון?</p>
+                <button onclick="handleSelfCheck(true)" style="background: #4CAF50; width: 45%;">כן! 👍</button>
+                <button onclick="handleSelfCheck(false)" style="background: #f44336; width: 45%;">לא 👎</button>
             </div>
             
             <button id="play-sound-btn" class="sound-btn hidden" onclick="repeatSound()">🔊 השמע שוב</button>
@@ -132,6 +144,12 @@
     ];
 
     const wordsToSmall = ['BAG', 'DAD', 'BANANA', 'DAN', 'GAB', 'NAD', 'AND', 'BAND'];
+    
+    // New Dictation List (No duplicates, capitalized names)
+    const dictationWords = [
+        'Ann', 'Dan', 'Gad', 'Nad', 'Dana', 'Bag', 'Gab', 'Banana', 'Bab', 'Dad', 
+        'Nag', 'An', 'Ban', 'Ad', 'Bad', 'And', 'Band', 'Dand', 'Ab', 'Ag', 'A'
+    ];
     
     const namesTrans = [
         { en: 'Dan', he: 'דן' }, { en: 'Gad', he: 'גד' }, 
@@ -156,75 +174,57 @@
         { word: 'Dad', type: 'vocab', display: 'אבא' }
     ];
 
+    const praises = [
+        "כל הכבוד אלה!", "איזה אלופה אלה!", "את פשוט נהדרת!", 
+        "וואו, הצלחת!", "גאונה של אבא!", "יופי של תשובה אלה!", "מצוין, תמשיכי ככה!"
+    ];
+
     // --- State ---
     let score = 0;
     let currentGame = '';
     let currentQuestion = null;
+    let timerInterval = null;
 
     // --- Canvas Setup ---
     const canvas = document.getElementById('drawCanvas');
     const ctx = canvas.getContext('2d');
     let isDrawing = false;
 
-    // Fix Canvas scaling for mobile screens
     function resizeCanvas() {
+        // ... (Canvas Resize Code) ...
         const container = document.getElementById('canvas-container');
-        // Make canvas fill the container width, keep aspect ratio roughly
         let width = Math.min(window.innerWidth - 60, 350);
         canvas.width = width;
         canvas.height = 200;
-        
-        // Setup drawing style
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.strokeStyle = '#000';
     }
 
-    // Drawing Events (Touch & Mouse)
-    function startDraw(e) {
-        isDrawing = true;
-        draw(e);
-    }
-    function endDraw() {
-        isDrawing = false;
-        ctx.beginPath();
-    }
+    function startDraw(e) { isDrawing = true; draw(e); }
+    function endDraw() { isDrawing = false; ctx.beginPath(); }
     function draw(e) {
         if (!isDrawing) return;
-        
-        e.preventDefault(); // Stop scrolling
-        
+        e.preventDefault();
         let clientX, clientY;
-        if(e.touches) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
+        if(e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; } 
+        else { clientX = e.clientX; clientY = e.clientY; }
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
         const y = clientY - rect.top;
-
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x, y);
+        ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
     }
-
-    // Add Event Listeners
-    canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('mouseup', endDraw);
-    canvas.addEventListener('mousemove', draw);
     
-    canvas.addEventListener('touchstart', startDraw, {passive: false});
-    canvas.addEventListener('touchend', endDraw);
+    // Listeners
+    canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('touchstart', startDraw, {passive: false}); canvas.addEventListener('touchend', endDraw);
     canvas.addEventListener('touchmove', draw, {passive: false});
 
     // --- Game Logic ---
 
     function showMenu() {
+        clearInterval(timerInterval); // Stop any running timer
         document.getElementById('menu').classList.remove('hidden');
         document.getElementById('game-area').classList.add('hidden');
         document.getElementById('feedback').innerText = '';
@@ -241,27 +241,42 @@
     }
 
     function nextQuestion() {
+        clearInterval(timerInterval); // Reset timer
         document.getElementById('feedback').innerText = '';
         const display = document.getElementById('question-display');
         const choices = document.getElementById('choices-area');
         const drawingArea = document.getElementById('drawing-area');
         const instruction = document.getElementById('instruction-text');
         const soundBtn = document.getElementById('play-sound-btn');
+        const timerDisplay = document.getElementById('timer-display');
         
         // Reset UI
         choices.innerHTML = '';
         drawingArea.classList.add('hidden');
         soundBtn.classList.add('hidden');
+        timerDisplay.classList.add('hidden');
         display.classList.remove('hidden');
         document.getElementById('self-check').classList.add('hidden');
         document.getElementById('drawing-controls').classList.remove('hidden');
+        display.innerText = ''; // Clear text
 
-        if (currentGame === 'letters') {
+        if (currentGame === 'dictation') {
+            instruction.innerText = "הקשיבי למילה וכתבי במחברת (יש לך 8 שניות!)";
+            let word = dictationWords[Math.floor(Math.random() * dictationWords.length)];
+            currentQuestion = word;
+            
+            soundBtn.classList.remove('hidden');
+            timerDisplay.classList.remove('hidden');
+            
+            // Speak and start timer
+            setTimeout(() => speak(word, 'en-US', 0.8), 500); 
+            startTimer(8, word);
+
+        } else if (currentGame === 'letters') {
             instruction.innerText = "איזו אות קטנה מתאימה לאות הגדולה?";
             let item = letters[Math.floor(Math.random() * letters.length)];
             currentQuestion = item;
             display.innerText = item.big;
-            
             let options = [item.small];
             while(options.length < 3) {
                 let r = letters[Math.floor(Math.random() * letters.length)].small;
@@ -274,7 +289,6 @@
             let word = wordsToSmall[Math.floor(Math.random() * wordsToSmall.length)];
             currentQuestion = word;
             display.innerText = word;
-            
             drawingArea.classList.remove('hidden');
             clearCanvas();
 
@@ -283,7 +297,6 @@
             let item = namesTrans[Math.floor(Math.random() * namesTrans.length)];
             currentQuestion = item;
             display.innerText = item.en;
-            
             let options = [item.he];
             while(options.length < 3) {
                 let r = namesTrans[Math.floor(Math.random() * namesTrans.length)].he;
@@ -297,9 +310,7 @@
             currentQuestion = item;
             display.classList.add('hidden');
             soundBtn.classList.remove('hidden');
-            
-            setTimeout(() => speak(item.word), 500);
-
+            setTimeout(() => speak(item.word, 'en-US'), 500);
             let options = [item];
             while(options.length < 4) {
                 let r = listeningData[Math.floor(Math.random() * listeningData.length)];
@@ -307,6 +318,23 @@
             }
             shuffle(options).forEach(opt => createButton(opt.display, opt.word === item.word));
         }
+    }
+
+    function startTimer(seconds, word) {
+        const timerDisplay = document.getElementById('timer-display');
+        let timeLeft = seconds;
+        timerDisplay.innerText = timeLeft;
+        
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerDisplay.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerDisplay.innerText = "נגמר הזמן!";
+                // Reveal Dictation Answer automatically
+                revealAnswer(true); // true indicates dictation mode
+            }
+        }, 1000);
     }
 
     function createButton(text, isCorrect) {
@@ -317,61 +345,63 @@
         document.getElementById('choices-area').appendChild(btn);
     }
 
-    // Drawing Logic Helper
-    function clearCanvas() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-    function revealAnswer() {
-        // Hide controls, show check area
+    function revealAnswer(isDictation = false) {
         document.getElementById('drawing-controls').classList.add('hidden');
-        const selfCheck = document.getElementById('self-check');
-        selfCheck.classList.remove('hidden');
-        document.getElementById('correct-answer-text').innerText = currentQuestion.toLowerCase();
-    }
-
-    function handleSelfCheck(isCorrect) {
-        if (isCorrect) {
-            handleAnswer(true);
-        } else {
-            handleAnswer(false);
+        document.getElementById('self-check').classList.remove('hidden');
+        
+        let answerText = currentQuestion;
+        if(typeof currentQuestion === 'object' && currentQuestion.word) answerText = currentQuestion.word;
+        if(typeof currentQuestion === 'string') answerText = currentQuestion;
+        
+        // For writing game, show lowercase. For dictation, show as is (some capitalized).
+        if(currentGame === 'writing') answerText = answerText.toLowerCase();
+        
+        document.getElementById('correct-answer-text').innerText = answerText;
+        
+        if(isDictation) {
+             document.getElementById('instruction-text').innerText = "האם כתבת נכון במחברת?";
+             speak("Time is up", 'en-US');
         }
     }
+
+    function handleSelfCheck(isCorrect) { handleAnswer(isCorrect); }
 
     function handleAnswer(isCorrect) {
         const fb = document.getElementById('feedback');
         if (isCorrect) {
-            fb.innerText = "כל הכבוד! את אלופה! ⭐";
+            const randomPraise = praises[Math.floor(Math.random() * praises.length)];
+            fb.innerText = randomPraise + " ⭐";
             fb.className = "feedback correct";
             score += 10;
             document.getElementById('score').innerText = score;
-            speak("Good job"); 
-            setTimeout(nextQuestion, 2000);
+            speak(randomPraise, 'he-IL');
+            setTimeout(nextQuestion, 2500);
         } else {
-            fb.innerText = "לא נורא, נסי שוב בפעם הבאה 😉";
+            fb.innerText = "לא נורא, נסי שוב במילה הבאה 😉";
             fb.className = "feedback wrong";
-            setTimeout(nextQuestion, 2000); // Move on anyway
+            setTimeout(nextQuestion, 2500);
         }
     }
 
-    function speak(text) {
+    function speak(text, lang = 'en-US', rate = 1.0) {
         if ('speechSynthesis' in window) {
             const msg = new SpeechSynthesisUtterance();
             msg.text = text;
-            msg.lang = 'en-US';
+            msg.lang = lang;
+            msg.rate = rate; 
             window.speechSynthesis.speak(msg);
         }
     }
 
     function repeatSound() {
-        if(currentQuestion && currentQuestion.word) {
-            speak(currentQuestion.word);
-        }
+        let text = currentQuestion;
+        if(typeof currentQuestion === 'object') text = currentQuestion.word;
+        speak(text, 'en-US', 0.8); // Slower for repeat
     }
 
-    function shuffle(array) {
-        return array.sort(() => Math.random() - 0.5);
-    }
+    function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
 </script>
 
 </body>

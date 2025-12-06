@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>מתכוננים למבחן באנגלית - אלה</title>
+    <title>מתכוננים למבחן באנגלית - אֶלָּה</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -90,7 +90,7 @@
 <body>
 
     <div id="menu" class="card">
-        <h1>🎓 לומדים למבחן - אלה</h1>
+        <h1>🎓 לומדים למבחן - אֶלָּה</h1>
         <p>בחרי משחק:</p>
         <button class="menu-btn" onclick="startGame('letters')">🅰️ התאמת אותיות (A-a)</button>
         <button class="menu-btn" onclick="startGame('writing')">✍️ כתיבה (ציור על המסך)</button>
@@ -174,9 +174,15 @@
         { word: 'Dad', type: 'vocab', display: 'אבא' }
     ];
 
+    // תיקון: הוספתי ניקוד לשם אלה כדי שהמחשב יקרא אותו נכון
     const praises = [
-        "כל הכבוד אלה!", "איזה אלופה אלה!", "את פשוט נהדרת!", 
-        "וואו, הצלחת!", "גאונה של אבא!", "יופי של תשובה אלה!", "מצוין, תמשיכי ככה!"
+        "כל הכבוד אֶלָּה!", 
+        "איזה אלופה אֶלָּה!", 
+        "את פשוט נהדרת!", 
+        "וואו, הצלחת!", 
+        "גאונה של אבא!", 
+        "יופי של תשובה אֶלָּה!", 
+        "מצוין, תמשיכי ככה!"
     ];
 
     // --- State ---
@@ -191,7 +197,6 @@
     let isDrawing = false;
 
     function resizeCanvas() {
-        // ... (Canvas Resize Code) ...
         const container = document.getElementById('canvas-container');
         let width = Math.min(window.innerWidth - 60, 350);
         canvas.width = width;
@@ -270,7 +275,7 @@
             
             // Speak and start timer
             setTimeout(() => speak(word, 'en-US', 0.8), 500); 
-            startTimer(15, word);
+            startTimer(8, word);
 
         } else if (currentGame === 'letters') {
             instruction.innerText = "איזו אות קטנה מתאימה לאות הגדולה?";
@@ -331,8 +336,7 @@
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 timerDisplay.innerText = "נגמר הזמן!";
-                // Reveal Dictation Answer automatically
-                revealAnswer(true); // true indicates dictation mode
+                revealAnswer(true); 
             }
         }, 1000);
     }
@@ -355,7 +359,6 @@
         if(typeof currentQuestion === 'object' && currentQuestion.word) answerText = currentQuestion.word;
         if(typeof currentQuestion === 'string') answerText = currentQuestion;
         
-        // For writing game, show lowercase. For dictation, show as is (some capitalized).
         if(currentGame === 'writing') answerText = answerText.toLowerCase();
         
         document.getElementById('correct-answer-text').innerText = answerText;
@@ -388,7 +391,17 @@
     function speak(text, lang = 'en-US', rate = 1.0) {
         if ('speechSynthesis' in window) {
             const msg = new SpeechSynthesisUtterance();
-            msg.text = text;
+            
+            // --- תיקון הגייה מיוחד לאלה ---
+            let spokenText = text;
+            if (lang === 'he-IL' && text.includes("אֶלָּה")) {
+                // לפעמים הניקוד לא מספיק, אז אם זה עברית, אנחנו יכולים 'לרמות' 
+                // ולשלוח למנוע הדיבור את המילה Ella באנגלית בתוך המשפט העברי
+                // זה בדרך כלל עובד מצוין בטלפונים
+                spokenText = text.replace("אֶלָּה", "Ella");
+            }
+
+            msg.text = spokenText;
             msg.lang = lang;
             msg.rate = rate; 
             window.speechSynthesis.speak(msg);
@@ -398,7 +411,7 @@
     function repeatSound() {
         let text = currentQuestion;
         if(typeof currentQuestion === 'object') text = currentQuestion.word;
-        speak(text, 'en-US', 0.8); // Slower for repeat
+        speak(text, 'en-US', 0.8); 
     }
 
     function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
